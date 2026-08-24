@@ -1,0 +1,7 @@
+{
+  "api_base_url": "https://sslhnjxdavkzktpnrivn.supabase.co",
+  "slug": "luqa-beam-lme01",
+  "token": "paste the one-time token shown by LUQA's Add New LUQA Bench flow here",
+  "sensor_mode": "simulated",
+  "i2c_bus_number": 1
+}

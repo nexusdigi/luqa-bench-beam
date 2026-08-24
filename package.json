@@ -1,0 +1,14 @@
+{
+  "name": "luqa-bench-beam",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LUQA BEAM bench agent — runs on a Raspberry Pi wired to a projection test wall",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}
