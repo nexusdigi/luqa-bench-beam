@@ -19,15 +19,21 @@
  *   node agent.js
  */
 
-const { loadConfig, sendHeartbeat, pollJob, respondJob, reportProgress, pollSession, reportAbort } = require('./src/luqaClient');
+const { loadConfig, sendHeartbeat, pollJob, respondJob, reportProgress, pollSession, reportAbort, AGENT_VERSION } = require('./src/luqaClient');
 const { computeReading, ASPECT_RATIOS } = require('./src/beam/beamMath');
 const { readSimulated } = require('./src/beam/sensors/simulatedSensors');
 const { setLed } = require('./src/beam/ledMatrix');
+const { checkForUpdate, applyUpdateAndExit } = require('./src/selfUpdate');
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const JOB_POLL_INTERVAL_MS = 3_000;
 const LIVE_LOOP_INTERVAL_MS = 1_000;
 const DEFAULT_ASPECT_RATIO = '1610';
+// A pushed test-flow change should reach every bench in the fleet without
+// anyone SSHing in — checked between job cycles only (see main()), never
+// mid-session. 10 minutes balances "changes land quickly" against not
+// hammering GitHub's raw-content CDN across a growing number of benches.
+const UPDATE_CHECK_INTERVAL_MS = 10 * 60_000;
 
 /**
  * Sensor reading is behind a tiny interface so agent.js doesn't care
@@ -157,6 +163,7 @@ async function main() {
   // 90s online-staleness window, so it keeps its own 30s cadence; job
   // polling now runs on its own much tighter loop.
   let lastHeartbeatAt = 0;
+  let lastUpdateCheckAt = 0;
   for (;;) {
     try {
       if (Date.now() - lastHeartbeatAt >= HEARTBEAT_INTERVAL_MS) {
@@ -164,6 +171,18 @@ async function main() {
         lastHeartbeatAt = Date.now();
       }
       await pollAndRunJob(config, sensors);
+
+      // Only ever checked/applied here, between job cycles — never while a
+      // live-aim session is running (pollAndRunJob has already returned by
+      // this point; runLiveLoop only exits when the session itself ends).
+      if (Date.now() - lastUpdateCheckAt >= UPDATE_CHECK_INTERVAL_MS) {
+        lastUpdateCheckAt = Date.now();
+        const update = await checkForUpdate(AGENT_VERSION);
+        if (update.available) {
+          console.log(`[update] ${update.currentVersion} -> ${update.remoteVersion} available, updating…`);
+          applyUpdateAndExit(); // does not return on success
+        }
+      }
     } catch (err) {
       console.error(`[agent] cycle error: ${err.stack || err.message}`);
     }

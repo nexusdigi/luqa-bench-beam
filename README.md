@@ -7,6 +7,16 @@ directly. Full architecture and the API contract this agent implements: see
 [`docs/architecture/luqa-benches-architecture.md`](https://github.com/nexusdigi/LUQA/blob/main/docs/architecture/luqa-benches-architecture.md)
 in the main LUQA repo (§12).
 
+## Self-update
+
+Between job cycles, the agent checks whether `package.json` on `origin/main`
+has a different version than what's currently running (`src/selfUpdate.js`).
+If so, it does a `git pull` + `npm install` and exits — the systemd unit's
+`Restart=always` brings the new code straight back up. Means a change
+pushed to `main` reaches every bench in the fleet within ~10 minutes, no
+manual SSH-in-and-pull per bench. Only ever checked/applied between jobs,
+never mid-session.
+
 ## What this does
 
 Unlike LUQA PIXEL's fire-and-forget automated test sequence, LUQA BEAM is an
